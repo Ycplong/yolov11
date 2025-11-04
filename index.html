@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据处理应用 (HTTP API)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部按钮区域 -->
+        <div class="header">
+            <div class="button-group">
+                <button id="loadDataBtn" class="btn primary">加载数据</button>
+                <button id="reloadDataBtn" class="btn primary" disabled>重载数据</button>
+                <button id="exportTrainDataBtn" class="btn secondary" disabled>训练数据导出</button>
+                <button id="exportKlarfDataBtn" class="btn secondary" disabled>klarf文件导出</button>
+            </div>
+            <div id="statusBar" class="status-bar">正在连接后端服务...</div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <!-- 左侧区域 -->
+            <div class="left-panel">
+                <!-- 筛选区域 -->
+                <div class="filter-container">
+                    <h3>缺陷筛选</h3>
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>X尺寸大于:</label>
+                            <input type="number" id="filterXSize" placeholder="输入X尺寸">
+                        </div>
+                        <div class="filter-item">
+                            <label>Y尺寸大于:</label>
+                            <input type="number" id="filterYSize" placeholder="输入Y尺寸">
+                        </div>
+                        <div class="filter-item">
+                            <label>区域面积大于:</label>
+                            <input type="number" id="filterArea" placeholder="输入面积">
+                        </div>
+                        <div class="filter-item">
+                            <label>信号强度大于:</label>
+                            <input type="number" id="filterSignal" placeholder="输入信号强度">
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>缺陷类型:</label>
+                            <select id="filterType">
+                                <option value="">全部</option>
+                                <option value="Nuisance">Nuisance</option>
+                                <option value="Particle">Particle</option>
+                                <option value="Black">Black</option>
+                                <option value="Spatial">Spatial</option>
+                                <option value="Downfall">Downfall</option>
+                                <option value="Scratch">Scratch</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <button id="applyFilterBtn" class="btn primary">应用筛选</button>
+                            <button id="clearFilterBtn" class="btn secondary">清除筛选</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- 数据表格 -->
+                <div class="table-container">
+                    <h3>Defect List</h3>
+                    <div class="table-wrapper">
+                        <table id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>XCenter</th>
+                                    <th>YCenter</th>
+                                    <th>XSize</th>
+                                    <th>YSize</th>
+                                    <th>Area</th>
+                                    <th>RawType</th>
+                                    <th>ADCType</th>
+                                    <th>FinalType</th>
+                                    <th>Operation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- 数据行将在这里动态生成 -->
+                            </tbody>
+                        </table>
+                        <div id="paginationContainer" class="pagination-container"></div>
+                    </div>
+                </div>
+
+                <!-- 图像缺陷表格 -->
+                <div class="table-container image-defects-table">
+                    <h3>当前图像缺陷列表</h3>
+                    <div class="table-wrapper">
+                        <table id="imageDefectTable">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>XCenter</th>
+                                    <th>YCenter</th>
+                                    <th>XSize</th>
+                                    <th>YSize</th>
+                                    <th>Area</th>
+                                    <th>RawType</th>
+                                    <th>ADCType</th>
+                                    <th>FinalType</th>
+                                </tr>
+                            </thead>
+                            <tbody id="imageDefectBody">
+                                <!-- 动态填充数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧图像区域 -->
+            <div class="right-panel">
+                <!-- 统一的标注控制模板 -->
+                <div class="annotation-panel">
+                    <h3>缺陷图像</h3>
+                    <div class="annotation-controls">
+                        <div class="control-group">
+                            <label for="category-input">类别标签：</label>
+                            <select id="category-input" class="category-input">
+                                <option value="0">0-NoReview</option>
+                                <option value="1">1-Nuisance</option>
+                                <option value="2">2-Particle</option>
+                                <option value="3">3-Black</option>
+                                <option value="4">4-Spatial</option>
+                                <option value="5">5-Downfall</option>
+                                <option value="6">6-Scratch</option>
+                            </select>
+                            <!-- <input type="text" id="categoryInput" class="category-input" placeholder="输入类别标签"> -->
+                        </div>
+                        <div class="control-group">
+                            <!-- <label>边界框坐标：</label> -->
+                            <div class="bbox-coordinates">
+                                <div class="coord-item">
+                                    <label for="bboxXCenter">CenterX:</label>
+                                    <input type="number" id="bboxXCenter" class="coord-input" readonly>
+                                </div>
+                                <div class="coord-item">
+                                    <label for="bboxYCenter">CenterY:</label>
+                                    <input type="number" id="bboxYCenter" class="coord-input" readonly>
+                                </div>
+                                <div class="coord-item">
+                                    <label for="bboxXSize">Width:</label>
+                                    <input type="number" id="bboxXSize" class="coord-input" readonly>
+                                </div>
+                                <div class="coord-item">
+                                    <label for="bboxYSize">Height:</label>
+                                    <input type="number" id="bboxYSize" class="coord-input" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <button id="saveAnnotationBtn" class="btn primary">保存标注</button>
+                            <button id="resetBBoxBtn" class="btn secondary">重置标注</button>
+                        </div>
+                    </div>
+
+                    <!-- 图像展示区域 -->
+                    <div class="image-section">
+                        <div class="image-grid">
+                            <div class="image-item" id="surface-img">
+                                <h4>Surface Images</h4>
+                                <img src="" alt="图像1" class="image-preview" data-index="0">
+                                <div class="bounding-box" data-index="0"></div>
+                            </div>
+                            <div class="image-item" id="pl-img">
+                                <h4>PL Image</h4>
+                                <img src="" alt="图像2" class="image-preview" data-index="1">
+                                <div class="bounding-box" data-index="1"></div>
+                            </div>
+                            <div class="image-item" id="surface-box">
+                                <h4>Surface Box</h4>
+                                <img src="" alt="图像3" class="image-preview" data-index="2">
+                                <div class="bounding-box" data-index="2"></div>
+                            </div>
+                            <div class="image-item" id="pl-box">
+                                <h4>PL Box</h4>
+                                <img src="" alt="图像4" class="image-preview" data-index="3">
+                                <div class="bounding-box" data-index="3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加载遮罩 -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>正在处理，请稍候...</p>
+        </div>
+    </div>
+
+    <style>
+/* 筛选区域样式 */
+.filter-container {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-item label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+}
+
+.filter-item input,
+.filter-item select {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 150px;
+}
+
+.filter-item input:focus,
+.filter-item select:focus {
+    outline: none;
+    border-color: #409eff;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+/* 按钮样式 */
+.btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn.primary {
+    background-color: #409eff;
+    color: white;
+}
+
+.btn.primary:hover {
+    background-color: #66b1ff;
+}
+
+.btn.secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn.secondary:hover {
+    background-color: #868e96;
+}
+
+/* 表格容器样式 */
+.table-container {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.table-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .filter-row {
+        flex-direction: column;
+    }
+    
+    .filter-item {
+        width: 100%;
+    }
+    
+    .filter-item input,
+    .filter-item select {
+        width: calc(100% - 100px);
+    }
+}
+</style>
+
+<script>
+// 模拟缺陷数据
+const mockDefectData = [
+    { No: 1, XCenter: 123.45, YCenter: 67.89, XSize: 10.5, YSize: 8.2, Area: 86.1, RawType: 'P', ADCType: 'Particle', FinalType: 'Particle', SignalStrength: 150 },
+    { No: 2, XCenter: 234.56, YCenter: 78.90, XSize: 5.2, YSize: 4.8, Area: 24.96, RawType: 'B', ADCType: 'Black', FinalType: 'Black', SignalStrength: 95 },
+    { No: 3, XCenter: 345.67, YCenter: 89.01, XSize: 15.8, YSize: 12.3, Area: 194.34, RawType: 'S', ADCType: 'Scratch', FinalType: 'Scratch', SignalStrength: 210 },
+    { No: 4, XCenter: 456.78, YCenter: 90.12, XSize: 7.3, YSize: 6.5, Area: 47.45, RawType: 'P', ADCType: 'Particle', FinalType: 'Nuisance', SignalStrength: 88 },
+    { No: 5, XCenter: 567.89, YCenter: 10.23, XSize: 12.1, YSize: 9.7, Area: 117.37, RawType: 'D', ADCType: 'Downfall', FinalType: 'Downfall', SignalStrength: 175 },
+    { No: 6, XCenter: 678.90, YCenter: 21.34, XSize: 18.5, YSize: 15.2, Area: 281.2, RawType: 'S', ADCType: 'Spatial', FinalType: 'Spatial', SignalStrength: 245 },
+    { No: 7, XCenter: 789.01, YCenter: 32.45, XSize: 4.6, YSize: 4.2, Area: 19.32, RawType: 'B', ADCType: 'Black', FinalType: 'Nuisance', SignalStrength: 76 },
+    { No: 8, XCenter: 890.12, YCenter: 43.56, XSize: 20.3, YSize: 18.7, Area: 379.61, RawType: 'S', ADCType: 'Scratch', FinalType: 'Scratch', SignalStrength: 280 },
+    { No: 9, XCenter: 901.23, YCenter: 54.67, XSize: 8.9, YSize: 7.6, Area: 67.64, RawType: 'P', ADCType: 'Particle', FinalType: 'Particle', SignalStrength: 125 },
+    { No: 10, XCenter: 12.34, YCenter: 65.78, XSize: 11.7, YSize: 10.3, Area: 120.51, RawType: 'D', ADCType: 'Downfall', FinalType: 'Downfall', SignalStrength: 168 },
+    { No: 11, XCenter: 135.79, YCenter: 76.90, XSize: 13.2, YSize: 11.8, Area: 155.76, RawType: 'P', ADCType: 'Particle', FinalType: 'Particle', SignalStrength: 180 },
+    { No: 12, XCenter: 246.80, YCenter: 87.01, XSize: 6.5, YSize: 5.9, Area: 38.35, RawType: 'B', ADCType: 'Black', FinalType: 'Black', SignalStrength: 110 },
+    { No: 13, XCenter: 357.91, YCenter: 98.12, XSize: 17.4, YSize: 14.6, Area: 254.04, RawType: 'S', ADCType: 'Scratch', FinalType: 'Scratch', SignalStrength: 235 },
+    { No: 14, XCenter: 468.02, YCenter: 19.23, XSize: 9.1, YSize: 8.7, Area: 79.17, RawType: 'P', ADCType: 'Particle', FinalType: 'Nuisance', SignalStrength: 105 },
+    { No: 15, XCenter: 579.13, YCenter: 30.34, XSize: 14.8, YSize: 12.9, Area: 190.92, RawType: 'D', ADCType: 'Downfall', FinalType: 'Downfall', SignalStrength: 205 },
+    { No: 16, XCenter: 690.24, YCenter: 41.45, XSize: 22.1, YSize: 19.8, Area: 437.58, RawType: 'S', ADCType: 'Spatial', FinalType: 'Spatial', SignalStrength: 275 },
+    { No: 17, XCenter: 801.35, YCenter: 52.56, XSize: 5.4, YSize: 4.8, Area: 25.92, RawType: 'B', ADCType: 'Black', FinalType: 'Nuisance', SignalStrength: 90 },
+    { No: 18, XCenter: 912.46, YCenter: 63.67, XSize: 23.8, YSize: 21.5, Area: 511.7, RawType: 'S', ADCType: 'Scratch', FinalType: 'Scratch', SignalStrength: 310 },
+    { No: 19, XCenter: 23.57, YCenter: 74.78, XSize: 10.3, YSize: 9.5, Area: 97.85, RawType: 'P', ADCType: 'Particle', FinalType: 'Particle', SignalStrength: 145 },
+    { No: 20, XCenter: 134.68, YCenter: 85.89, XSize: 13.9, YSize: 12.3, Area: 170.97, RawType: 'D', ADCType: 'Downfall', FinalType: 'Downfall', SignalStrength: 195 }
+];
+
+let currentPage = 1;
+const pageSize = 5;
+let filteredData = [...mockDefectData];
+
+// DOM 元素
+const loadDataBtn = document.getElementById('loadDataBtn');
+const reloadDataBtn = document.getElementById('reloadDataBtn');
+const exportTrainDataBtn = document.getElementById('exportTrainDataBtn');
+const exportKlarfDataBtn = document.getElementById('exportKlarfDataBtn');
+const statusBar = document.getElementById('statusBar');
+const tableBody = document.getElementById('tableBody');
+const paginationContainer = document.getElementById('paginationContainer');
+const applyFilterBtn = document.getElementById('applyFilterBtn');
+const clearFilterBtn = document.getElementById('clearFilterBtn');
+const filterXSize = document.getElementById('filterXSize');
+const filterYSize = document.getElementById('filterYSize');
+const filterArea = document.getElementById('filterArea');
+const filterSignal = document.getElementById('filterSignal');
+const filterType = document.getElementById('filterType');
+const imageDefectBody = document.getElementById('imageDefectBody');
+const loadingOverlay = document.getElementById('loadingOverlay');
+
+// 初始化
+function init() {
+    statusBar.textContent = '就绪';
+    loadDataBtn.addEventListener('click', loadData);
+    reloadDataBtn.addEventListener('click', reloadData);
+    applyFilterBtn.addEventListener('click', applyFilters);
+    clearFilterBtn.addEventListener('click', clearFilters);
+}
+
+// 加载数据
+function loadData() {
+    showLoading();
+    
+    // 模拟网络延迟
+    setTimeout(() => {
+        filteredData = [...mockDefectData];
+        currentPage = 1;
+        renderTable();
+        renderPagination();
+        updateButtons(true);
+        statusBar.textContent = `已加载 ${filteredData.length} 条缺陷数据`;
+        hideLoading();
+    }, 500);
+}
+
+// 重新加载数据
+function reloadData() {
+    clearFilters();
+    loadData();
+}
+
+// 应用筛选
+function applyFilters() {
+    const xSize = parseFloat(filterXSize.value);
+    const ySize = parseFloat(filterYSize.value);
+    const area = parseFloat(filterArea.value);
+    const signal = parseFloat(filterSignal.value);
+    const type = filterType.value;
+    
+    filteredData = mockDefectData.filter(defect => {
+        let match = true;
+        
+        if (!isNaN(xSize) && defect.XSize <= xSize) match = false;
+        if (!isNaN(ySize) && defect.YSize <= ySize) match = false;
+        if (!isNaN(area) && defect.Area <= area) match = false;
+        if (!isNaN(signal) && defect.SignalStrength <= signal) match = false;
+        if (type && defect.ADCType !== type) match = false;
+        
+        return match;
+    });
+    
+    currentPage = 1;
+    renderTable();
+    renderPagination();
+    statusBar.textContent = `筛选结果：${filteredData.length} 条缺陷数据`;
+}
+
+// 清除筛选
+function clearFilters() {
+    filterXSize.value = '';
+    filterYSize.value = '';
+    filterArea.value = '';
+    filterSignal.value = '';
+    filterType.value = '';
+    
+    filteredData = [...mockDefectData];
+    currentPage = 1;
+    renderTable();
+    renderPagination();
+    statusBar.textContent = '已清除筛选条件';
+}
+
+// 渲染表格
+function renderTable() {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    const paginatedData = filteredData.slice(start, end);
+    
+    tableBody.innerHTML = '';
+    
+    paginatedData.forEach(defect => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${defect.No}</td>
+            <td>${defect.XCenter}</td>
+            <td>${defect.YCenter}</td>
+            <td>${defect.XSize}</td>
+            <td>${defect.YSize}</td>
+            <td>${defect.Area}</td>
+            <td>${defect.RawType}</td>
+            <td>${defect.ADCType}</td>
+            <td>${defect.FinalType}</td>
+            <td>
+                <button class="btn btn-small" onclick="selectDefect(${defect.No})")>查看</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// 渲染分页
+function renderPagination() {
+    const totalPages = Math.ceil(filteredData.length / pageSize);
+    
+    paginationContainer.innerHTML = '';
+    
+    const paginationInfo = document.createElement('span');
+    paginationInfo.textContent = `第 ${currentPage} 页，共 ${totalPages} 页`;
+    paginationInfo.className = 'pagination-info';
+    paginationContainer.appendChild(paginationInfo);
+    
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '上一页';
+    prevBtn.className = 'btn btn-small';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderTable();
+            renderPagination();
+        }
+    });
+    paginationContainer.appendChild(prevBtn);
+    
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '下一页';
+    nextBtn.className = 'btn btn-small';
+    nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderTable();
+            renderPagination();
+        }
+    });
+    paginationContainer.appendChild(nextBtn);
+}
+
+// 选择缺陷
+function selectDefect(no) {
+    const defect = filteredData.find(d => d.No === no);
+    if (defect) {
+        // 更新右侧图像区域和标注信息
+        document.getElementById('bboxXCenter').value = defect.XCenter;
+        document.getElementById('bboxYCenter').value = defect.YCenter;
+        document.getElementById('bboxXSize').value = defect.XSize;
+        document.getElementById('bboxYSize').value = defect.YSize;
+        
+        // 模拟图像加载
+        const imageElements = document.querySelectorAll('.image-preview');
+        imageElements.forEach(img => {
+            // 使用占位图像
+            img.src = `https://via.placeholder.com/200x200?text=Defect+${no}`;
+            img.style.display = 'block';
+        });
+        
+        // 更新当前图像缺陷列表
+        renderImageDefectList([defect]);
+        
+        statusBar.textContent = `已选择缺陷 #${no}`;
+    }
+}
+
+// 渲染当前图像缺陷列表
+function renderImageDefectList(defects) {
+    imageDefectBody.innerHTML = '';
+    
+    defects.forEach(defect => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${defect.No}</td>
+            <td>${defect.XCenter}</td>
+            <td>${defect.YCenter}</td>
+            <td>${defect.XSize}</td>
+            <td>${defect.YSize}</td>
+            <td>${defect.Area}</td>
+            <td>${defect.RawType}</td>
+            <td>${defect.ADCType}</td>
+            <td>${defect.FinalType}</td>
+        `;
+        imageDefectBody.appendChild(row);
+    });
+}
+
+// 更新按钮状态
+function updateButtons(enabled) {
+    reloadDataBtn.disabled = !enabled;
+    exportTrainDataBtn.disabled = !enabled;
+    exportKlarfDataBtn.disabled = !enabled;
+}
+
+// 显示加载遮罩
+function showLoading() {
+    loadingOverlay.style.display = 'flex';
+}
+
+// 隐藏加载遮罩
+function hideLoading() {
+    loadingOverlay.style.display = 'none';
+}
+
+// 暴露 selectDefect 函数到全局
+window.selectDefect = selectDefect;
+
+// 页面加载完成后初始化
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
